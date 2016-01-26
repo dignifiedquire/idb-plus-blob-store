@@ -1,15 +1,16 @@
 var db = require('db.js')
 var isUndefined = require('lodash.isUndefined')
-var through = require('through2')
-var bl = require('bl')
 var from = require('from2')
 var toBuffer = require('typedarray-to-buffer')
+var Transform = require('stream').Transform
+var util = require('util')
 
 function noop () {}
 
 function Blobs (opts) {
   if (!(this instanceof Blobs)) return new Blobs(opts)
   this.opts = !isUndefined(opts) ? opts : {}
+  if (typeof opts === 'string') this.opts = { name: opts }
   this.opts.name = !isUndefined(this.opts.name) ? this.opts.name : 'idb-plus-blob-store'
 
   var schema = {}
@@ -34,45 +35,62 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
   if (!cb) cb = noop
 
   var self = this
-  var result = through()
-
   var key = !isUndefined(opts.key) ? opts.key : 'undefined'
 
-  var error = function (err) {
-    cb(err)
-    result.destroy(err)
+  var FlushableStream = function (options) {
+    Transform.call(this, options)
+    this._bufs = []
   }
 
-  var ready = function () {
-    result.pipe(bl(function (err, data) {
-      if (err) return error(err)
+  util.inherits(FlushableStream, Transform)
 
-      self._store
-        .then(function (server) {
-          return server.add({
-            key: key,
-            item: data
-          })
-        })
-        .then(function () {
-          cb(null, {
-            key: key,
-            size: data.length
-          })
-        }, error)
-    }))
+  FlushableStream.prototype._transform = function (chunk, encoding, done) {
+    console.log('--transforming')
+    // coerce number arguments to strings, since Buffer(number) does
+    // uninitialized memory allocation
+    if (typeof buf === 'number') chunk = chunk.toString()
+
+    this._bufs.push(Buffer.isBuffer(chunk) ? chunk : new Buffer(chunk))
+    this.push(chunk)
+
+    if (done) done()
   }
 
-  this._store
-    .then(function (server) {
-      return server.get(key)
-        .then(function (data) {
-          if (data) return server.remove(key)
+  FlushableStream.prototype._flush = function (done) {
+    console.log('--flushing')
+    var data = this._bufs.slice()
+    var server
+    self._store
+      .then(function (s) {
+        server = s
+      })
+      .then(function () {
+        return server.get(key)
+      })
+      .then(function (data) {
+        if (data) return server.remove(key)
+      })
+      .then(function () {
+        return server.add({
+          key: key,
+          item: data
         })
-    })
-    .then(ready, error)
+      })
+      .then(function () {
+        console.log('--wrote', key)
+        cb(null, {
+          key: key,
+          size: data.length
+        })
+        done()
+      })
+      .catch(done)
+  }
 
-  return result
+  var res = new FlushableStream()
+  res.resume()
+
+  return res
 }
 
 Blobs.prototype.createReadStream = function (opts) {
@@ -87,10 +105,10 @@ Blobs.prototype.createReadStream = function (opts) {
 
     self._store
       .then(function (server) {
-
         return server.get(key)
       })
       .then(function (result) {
+        console.log(result)
         if (!result) throw new Error('key not found: ' + key)
 
         fetched = true

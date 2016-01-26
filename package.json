@@ -2,7 +2,7 @@
   "name": "idb-plus-blob-store",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "lint": "standard",
     "test": "npm run lint && npm run test:browser",
@@ -34,12 +34,9 @@
     "watchify": "^3.7.0"
   },
   "dependencies": {
-    "bl": "^1.0.1",
     "db.js": "^0.10.2",
-    "duplexify": "^3.4.2",
     "from2": "^2.1.0",
     "lodash.isundefined": "^3.0.1",
-    "through2": "^2.0.0",
     "typedarray-to-buffer": "^3.0.5"
   }
 }
