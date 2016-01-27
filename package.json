@@ -1,7 +1,7 @@
 {
   "name": "idb-plus-blob-store",
   "version": "1.0.0",
-  "description": "",
+  "description": "Abstract Blob Store implementation for indexeddb",
   "main": "src/index.js",
   "scripts": {
     "lint": "standard",
