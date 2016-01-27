@@ -1,5 +1,5 @@
 var db = require('db.js')
-var isUndefined = require('lodash.isUndefined')
+var isUndefined = require('lodash.isundefined')
 var from = require('from2')
 var toBuffer = require('typedarray-to-buffer')
 var Transform = require('stream').Transform

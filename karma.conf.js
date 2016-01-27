@@ -19,7 +19,7 @@ module.exports = (config) => {
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: true,
-    browsers: ['Chrome'],
+    browsers: process.env.TRAVIS ? ['Firefox'] : ['Chrome'],
     singleRun: false
   })
 }
