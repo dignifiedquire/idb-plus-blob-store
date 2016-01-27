@@ -41,15 +41,12 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
     Transform.call(this, options)
     this._bufs = []
     this._evilIsFlushing = false
-    this._evilPending = 0
-    this._evilWantFinish = false
     this._evilFlushed = false
   }
 
   util.inherits(FlushableStream, Transform)
 
   FlushableStream.prototype._transform = function (chunk, encoding, done) {
-    this._evilPending++
     // coerce number arguments to strings, since Buffer(number) does
     // uninitialized memory allocation
     if (typeof buf === 'number') chunk = chunk.toString()
@@ -57,7 +54,6 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
     this._bufs.push(Buffer.isBuffer(chunk) ? chunk : new Buffer(chunk))
     this.push(chunk)
 
-    this._evilPending--
     if (done) done()
   }
 
