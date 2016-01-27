@@ -40,12 +40,16 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
   var FlushableStream = function (options) {
     Transform.call(this, options)
     this._bufs = []
+    this._evilIsFlushing = false
+    this._evilPending = 0
+    this._evilWantFinish = false
+    this._evilFlushed = false
   }
 
   util.inherits(FlushableStream, Transform)
 
   FlushableStream.prototype._transform = function (chunk, encoding, done) {
-    console.log('--transforming')
+    this._evilPending++
     // coerce number arguments to strings, since Buffer(number) does
     // uninitialized memory allocation
     if (typeof buf === 'number') chunk = chunk.toString()
@@ -53,11 +57,21 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
     this._bufs.push(Buffer.isBuffer(chunk) ? chunk : new Buffer(chunk))
     this.push(chunk)
 
+    this._evilPending--
     if (done) done()
   }
 
   FlushableStream.prototype._flush = function (done) {
-    console.log('--flushing')
+    this._evilIsFlushing = true
+
+    var innerSelf = this
+    var finish = function (err) {
+      innerSelf._evilIsFlushing = false
+      innerSelf._evilFlushed = true
+      innerSelf.emit('_evilFlush')
+      if (done) done(err)
+    }
+
     var data = this._bufs.slice()
     var server
     self._store
@@ -77,20 +91,46 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
         })
       })
       .then(function () {
-        console.log('--wrote', key)
         cb(null, {
           key: key,
           size: data.length
         })
-        done()
+        finish()
       })
-      .catch(done)
+      .catch(finish)
   }
 
-  var res = new FlushableStream()
-  res.resume()
+  FlushableStream.prototype.emit = function (event) {
+    var innerSelf = this
+    var args = arguments
 
-  return res
+    var emit = function () {
+      Transform.prototype.emit.apply(innerSelf, args)
+    }
+
+    switch (event) {
+      case 'finish':
+        // Flush finished?
+        if (this._evilFlushed) {
+          // Flushing done
+          emit()
+        } else if (this._evilIsFlushing) {
+          // Flushing in process
+          return
+        } else {
+          // Start flushing
+          this._flush()
+        }
+        break
+      case '_evilFlush':
+        this.emit('finish')
+        break
+      default:
+        emit()
+    }
+  }
+
+  return new FlushableStream()
 }
 
 Blobs.prototype.createReadStream = function (opts) {
@@ -99,29 +139,32 @@ Blobs.prototype.createReadStream = function (opts) {
   var self = this
   var key = !isUndefined(opts.key) ? opts.key : 'undefined'
 
-  var fetched = false
+  var buf = null
   var result = from(function (size, next) {
-    if (fetched) return next(null, null)
+    if (!buf) {
+      return self._store
+        .then(function (server) {
+          return server.get(key)
+        })
+        .then(function (result) {
+          if (!result) throw new Error('key not found: ' + key)
 
-    self._store
-      .then(function (server) {
-        return server.get(key)
-      })
-      .then(function (result) {
-        console.log(result)
-        if (!result) throw new Error('key not found: ' + key)
+          buf = result
+          const nextPart = buf.pop()
 
-        fetched = true
-        next(null, toBuffer(result))
-      })
-      .catch(function (err) {
-        fetched = true
-        next(err)
-      })
+          next(null, toBuffer(nextPart))
+        })
+        .catch(function (err) {
+          next(err)
+        })
+    }
+
+    if (buf.length === 0) return next(null, null)
+
+    next(null, toBuffer(buf.pop()))
   })
 
   result.resume()
-
   return result
 }
 
