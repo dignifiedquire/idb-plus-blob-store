@@ -6,8 +6,7 @@
   "scripts": {
     "lint": "aegir-lint",
     "test": "aegir-test browser",
-    "build": "aegir-build browser",
-    "release": "aegir-release browser"
+    "release": "aegir-release no-build"
   },
   "repository": {
     "type": "git",
