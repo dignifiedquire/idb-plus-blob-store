@@ -4,10 +4,10 @@
   "description": "Abstract Blob Store implementation for indexeddb",
   "main": "src/index.js",
   "scripts": {
-    "lint": "standard",
-    "test": "npm run lint && npm run test:browser",
-    "test:browser": "karma start --single-run=true karma.conf.js",
-    "test:debug": "karma start karma.conf.js"
+    "lint": "aegir-lint",
+    "test": "aegir-test browser",
+    "build": "aegir-build browser",
+    "release": "aegir-release browser"
   },
   "repository": {
     "type": "git",
@@ -22,21 +22,21 @@
   "homepage": "https://github.com/Dignifiedquire/idb-plus-blob-store#readme",
   "devDependencies": {
     "abstract-blob-store": "^3.2.0",
-    "browserify": "^13.0.0",
-    "karma": "^0.13.19",
-    "karma-browserify": "^5.0.1",
-    "karma-chrome-launcher": "^0.2.2",
-    "karma-firefox-launcher": "^0.1.7",
-    "karma-tap": "^1.0.3",
-    "karma-tape-reporter": "^1.0.3",
-    "standard": "^5.4.1",
-    "tape": "^4.4.0",
-    "watchify": "^3.7.0"
+    "aegir": "^2.1.1",
+    "bl": "^1.1.2",
+    "chai": "^3.5.0",
+    "pre-commit": "^1.1.2",
+    "tape": "^4.4.0"
   },
   "dependencies": {
-    "db.js": "^0.10.2",
+    "db.js": "^0.15.0",
     "from2": "^2.1.0",
     "lodash.isundefined": "^3.0.1",
+    "readable-stream": "^1.1.13",
     "typedarray-to-buffer": "^3.0.5"
-  }
+  },
+  "pre-commit": [
+    "lint",
+    "test"
+  ]
 }
