@@ -1,12 +1,19 @@
+sudo: false
 language: node_js
 node_js:
-  - 'stable'
+  - 4
+  - 5
+
+# Make sure we have new NPM.
+before_install:
+  - npm install -g npm
+
+script:
+  - npm run lint
+  - npm test
 
 addons:
   firefox: 'latest'
-
-script:
-  - npm test
 
 before_script:
   - export DISPLAY=:99.0

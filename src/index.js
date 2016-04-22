@@ -1,8 +1,10 @@
+'use strict'
+
 var db = require('db.js')
 var isUndefined = require('lodash.isundefined')
 var from = require('from2')
 var toBuffer = require('typedarray-to-buffer')
-var Transform = require('stream').Transform
+var Transform = require('readable-stream').Transform
 var util = require('util')
 
 function noop () {}
@@ -32,10 +34,15 @@ module.exports = Blobs
 Blobs.prototype.createWriteStream = function (opts, cb) {
   if (typeof opts === 'function') opts = {}
   if (typeof opts === 'string') opts = {key: opts}
+  if (opts.name && isUndefined(opts.key)) opts.key = opts.name
   if (!cb) cb = noop
 
   var self = this
-  var key = !isUndefined(opts.key) ? opts.key : 'undefined'
+  var key = opts.key
+
+  if (isUndefined(key)) {
+    return cb(new Error('Missing key'))
+  }
 
   var FlushableStream = function (options) {
     Transform.call(this, options)
@@ -130,10 +137,16 @@ Blobs.prototype.createWriteStream = function (opts, cb) {
 }
 
 Blobs.prototype.createReadStream = function (opts) {
+  if (!opts) opts = {}
   if (typeof opts === 'string') opts = {key: opts}
+  if (opts.name && isUndefined(opts.key)) opts.key = opts.name
 
   var self = this
-  var key = !isUndefined(opts.key) ? opts.key : 'undefined'
+  var key = opts.key
+
+  if (isUndefined(key)) {
+    throw new Error('Missing key')
+  }
 
   var buf = null
   var result = from(function (size, next) {
