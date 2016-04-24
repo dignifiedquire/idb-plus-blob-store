@@ -159,7 +159,7 @@ Blobs.prototype.createReadStream = function (opts) {
           if (!result) throw new Error('key not found: ' + key)
 
           buf = result
-          const nextPart = buf.pop()
+          var nextPart = buf.pop()
 
           next(null, toBuffer(nextPart))
         })
