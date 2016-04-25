@@ -156,11 +156,14 @@ Blobs.prototype.createReadStream = function (opts) {
           return server.get(key)
         })
         .then(function (result) {
-          if (!result) throw new Error('key not found: ' + key)
-
+          if (!result) {
+            throw new Error('key not found: ' + key)
+          }
           buf = result
           var nextPart = buf.pop()
-
+          if (isUndefined(nextPart)) {
+            return next(null, new Buffer(0))
+          }
           next(null, toBuffer(nextPart))
         })
         .catch(function (err) {
@@ -168,7 +171,9 @@ Blobs.prototype.createReadStream = function (opts) {
         })
     }
 
-    if (buf.length === 0) return next(null, null)
+    if (buf.length === 0) {
+      return next(null, null)
+    }
 
     next(null, toBuffer(buf.pop()))
   })
