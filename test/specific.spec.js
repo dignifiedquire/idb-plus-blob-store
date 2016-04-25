@@ -89,5 +89,25 @@ describe('idb-plus-blob-store', () => {
       ws.write('hello')
       ws.end()
     })
+    it('read an empty blob', (done) => {
+      const name = 'hello.txt'
+      const ws = store.createWriteStream({name}, (err, blob) => {
+        expect(err).to.not.exist
+        expect(blob.key).to.be.eql(name)
+
+        const rs = store.createReadStream({name})
+
+        rs.pipe(bl((err, res) => {
+          expect(err).to.not.exist
+          expect(res.length).to.equal(0)
+          expect(res).to.be.eql(new Buffer(0))
+
+          done()
+        }))
+      })
+
+      ws.write(new Buffer(0))
+      ws.end()
+    })
   })
 })
